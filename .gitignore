@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+desktop-dist/
+desktop-web-dist/
+out/
+
+# Electron build artifacts
+*.AppImage
+*.deb
+*.dmg
+*.exe
+*.rpm
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
