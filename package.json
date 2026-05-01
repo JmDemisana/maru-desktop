@@ -30,6 +30,18 @@
       "target": [
         {
           "target": "portable",
+          "arch": ["ia32"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["arm64"]
+        },
+        {
+          "target": "msix",
           "arch": ["x64"]
         }
       ]
@@ -45,7 +57,10 @@
     "mac": {
       "icon": "public/app-icon.png",
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": ["arm64"]
+        }
       ],
       "category": "public.app-category.utilities"
     }
