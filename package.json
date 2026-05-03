@@ -11,11 +11,16 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
-  "build": {
+    "build": {
     "appId": "io.maru.desktop",
     "productName": "Maru Desktop",
     "artifactName": "Maru-Desktop-${os}-${arch}.${ext}",
     "npmRebuild": false,
+    "publish": {
+      "provider": "github",
+      "owner": "JmDemisana",
+      "repo": "maru-desktop"
+    },
     "files": [
       "desktop-web-dist/**/*",
       "electron/**/*",
@@ -35,38 +40,16 @@
         {
           "target": "nsis",
           "arch": ["x64"]
-        },
-        {
-          "target": "portable",
-          "arch": ["arm64"]
-        },
-        {
-          "target": "msix",
-          "arch": ["x64"]
         }
       ]
-    },
-    "linux": {
-      "icon": "public/app-icon.png",
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Utility"
-    },
-    "mac": {
-      "icon": "public/app-icon.png",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["arm64"]
-        }
-      ],
-      "category": "public.app-category.utilities"
     }
   },
   "devDependencies": {
     "electron": "^41.3.0",
     "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3",
+    "multicast-dns": "^7.2.5"
   }
 }

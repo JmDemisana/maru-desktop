@@ -2,71 +2,152 @@
 
 Offline desktop shell for Maru applets. Built with Electron.
 
-## Downloads
+## License
 
-Get the latest release from the [Releases page](https://github.com/JmDemisana/maru-desktop/releases).
+**GNU General Public License v3.0 (GPL-3.0)** - See [LICENSE](LICENSE) for full text.
 
-### Available Platforms
-- **Windows** - Portable .exe (no installation required)
-- **Linux** - AppImage and .deb packages
-- **macOS** - DMG for Intel and Apple Silicon
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-## Included Applets
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-- **PhotoServe** - Photo layout and print workstation
-- **Cup-Cupper-Cuppers** - Shuffled-cup duel game
-- **Dael or No Dael** - Single-player deal game
-- **TUP Grade Solver** - Grade calculator with PNG export
-- **Options** - Desktop settings and themes
+You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-## Building Locally
+## Building on macOS
+
+**Note:** Electron macOS builds can only be created on a macOS machine. You cannot cross-compile for macOS from Windows or Linux.
+
+If you have a Mac, follow these steps:
 
 ### Prerequisites
-- Node.js 20+
-- npm
 
-### Install Dependencies
+- macOS 12 or later
+- Node.js 20+
+- Xcode Command Line Tools
+
+### Setup
+
+1. Clone the repo:
+```bash
+git clone https://github.com/JmDemisana/maru-desktop.git
+cd maru-desktop
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-### Copy Web Assets
-Before building, copy the `desktop-web-dist/` folder from the main maru-website repo:
+3. Build web assets from the main website repo:
 ```bash
-# From the main repo:
+# In maru-website:
 npm run build:desktop-web
 
-# Then copy the output:
+# Copy to desktop repo:
 cp -r desktop-web-dist/ /path/to/maru-desktop/
 ```
 
-### Run Development
+### Building for macOS
+
+```bash
+npm run dist -- --mac dmg
+```
+
+This creates a `.dmg` installer in the `dist/` folder.
+
+### Running Development
+
 ```bash
 npm start
 ```
 
-### Build Distribution
-```bash
-# Build for current platform
-npm run dist
+## Building on Windows
 
-# Build specific platform
-npm run dist -- --win portable    # Windows portable
-npm run dist -- --linux AppImage  # Linux AppImage
-npm run dist -- --mac dmg         # macOS DMG
+### Prerequisites
+
+- Windows 10/11
+- Node.js 20+
+
+### Setup
+
+1. Clone the repo:
+```bash
+git clone https://github.com/JmDemisana/maru-desktop.git
+cd maru-desktop
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Build web assets from the main website repo:
+```bash
+# In maru-website:
+npm run build:desktop-web
+
+# Copy to desktop repo:
+cp -r desktop-web-dist/ C:\path\to\maru-desktop\
+```
+
+### Building for Windows
+
+**Portable (no install):**
+```bash
+npm run dist -- --win portable
+```
+
+**Installer:**
+```bash
+npm run dist -- --win nsis
+```
+
+The executables will be in the `dist/` folder.
+
+## Building on Linux
+
+### Prerequisites
+
+- Linux (Ubuntu 20.04+ recommended)
+- Node.js 20+
+
+### Setup
+
+```bash
+git clone https://github.com/JmDemisana/maru-desktop.git
+cd maru-desktop
+npm install
+```
+
+Copy web assets similarly to Windows.
+
+### Building for Linux
+
+```bash
+npm run dist -- --linux AppImage
+# or
+npm run dist -- --linux deb
 ```
 
 ## CI/CD
 
-GitHub Actions automatically builds for all platforms when a git tag is pushed:
+GitHub Actions automatically builds for all platforms (Windows, macOS, Linux) when a git tag is pushed:
 
 ```bash
 git tag v0.0.1
 git push origin v0.0.1
 ```
 
-This triggers builds for Windows, Linux, and macOS, and creates a GitHub Release with all artifacts.
+This triggers builds for all platforms and creates a GitHub Release with all artifacts.
 
-## License
+## Project Structure
 
-Copyright © 2026 Maru. All rights reserved.
+- `src/` - Electron main process code
+- `src/preload.ts` - Preload script for IPC
+- `dist/` - Built executables
+- `desktop-web-dist/` - Web assets (copy from maru-website)
+
+## Notes
+
+- The desktop app runs the Maru website locally in an embedded browser
+- No internet required after initial setup
+- Uses local storage for settings
