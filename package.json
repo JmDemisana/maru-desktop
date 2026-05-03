@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Maru Desktop - Offline applet shell",
   "author": "Maru",
+  "license": "GPL-3.0",
   "type": "module",
   "main": "electron/main.mjs",
   "scripts": {
