@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld("maruDesktop", {
 });
 
 contextBridge.exposeInMainWorld("marucast", {
+  getQr: (token, siteOrigin) => ipcRenderer.invoke("marucast:get-qr", token, siteOrigin),
   startDiscovery: () => ipcRenderer.invoke("marucast:start-discovery"),
   stopDiscovery: () => ipcRenderer.invoke("marucast:stop-discovery"),
   connect: (host, port, name, code) =>

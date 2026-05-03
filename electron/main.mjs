@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import multicastDns from "multicast-dns";
 import electronUpdater from "electron-updater";
+import QRCode from "qrcode";
 const { autoUpdater } = electronUpdater;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -537,6 +538,25 @@ function getDesktopShellHtml() {
         flex-wrap: wrap;
       }
 
+      .receiver-qr {
+        text-align: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+
+      .receiver-qr p {
+        margin: 0 0 12px;
+        color: var(--desktop-muted);
+        font-size: 0.85rem;
+      }
+
+      .receiver-qr img {
+        border-radius: 8px;
+        max-width: 180px;
+      }
+
       .receiver-btn {
         padding: 10px 16px;
         border: 1px solid var(--desktop-border);
@@ -726,6 +746,10 @@ function getDesktopShellHtml() {
               <h2>Marucast Receiver</h2>
               <p>Discover and connect to Marucast senders on your network.</p>
             </div>
+            <div class="receiver-qr" id="receiver-qr" hidden>
+              <p>Scan with Maru Link app:</p>
+              <img id="receiver-qr-image" alt="QR code" />
+            </div>
             <div class="receiver-controls">
               <button class="receiver-btn receiver-btn-primary" id="receiver-discover" type="button">
                 Discover Senders
@@ -904,6 +928,14 @@ function getDesktopShellHtml() {
 
       discoverBtn?.addEventListener("click", () => {
         errorEl.hidden = true;
+        const siteOrigin = window.location.origin;
+        window.marucast?.getQr("", siteOrigin).then((result) => {
+          if (result?.ok && result?.dataUrl) {
+            const qrEl = document.getElementById("receiver-qr");
+            const qrImage = document.getElementById("receiver-qr-image");
+            if (qrEl && qrImage) { qrEl.hidden = false; qrImage.src = result.dataUrl; }
+          }
+        });
         receiver?.startDiscovery();
       });
 
@@ -1644,9 +1676,13 @@ ipcMain.handle("marucast:get-status", () => {
   };
 });
 
-ipcMain.handle("marucast:get-senders", () => {
-  if (!marucastReceiver) return "[]";
-  return marucastReceiver.getSendersJson();
+ipcMain.handle("marucast:get-qr", async (_event, token, siteOrigin) => {
+  if (!token || !siteOrigin) return { ok: false };
+  const url = `maruhelper://?token=${encodeURIComponent(token)}&siteOrigin=${encodeURIComponent(siteOrigin)}&target=marucast`;
+  try {
+    const dataUrl = await QRCode.toDataURL(url, { width: 200, margin: 2 });
+    return { ok: true, dataUrl };
+  } catch { return { ok: false }; }
 });
 
 let updateSupported = true;
