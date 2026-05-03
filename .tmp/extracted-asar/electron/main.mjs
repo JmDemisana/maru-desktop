@@ -4,6 +4,7 @@ import { createConnection } from "node:net";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import multicastDns from "multicast-dns";
 import electronUpdater from "electron-updater";
 import QRCode from "qrcode";
 const { autoUpdater } = electronUpdater;
@@ -68,20 +69,20 @@ const DESKTOP_APPLETS = [
     description: "Grade solver and PNG export.",
   },
   {
+    id: "marucast-receiver",
+    name: "Marucast Receiver",
+    route: "/desktop-shell.html?applet=marucast-receiver",
+    kicker: "Streaming",
+    icon: "/icons/applet-marucast.svg",
+    description: "Receive Marucast audio from devices on your network.",
+  },
+  {
     id: "options",
     name: "Options",
     route: "/desktop-shell.html?applet=options",
     kicker: "Settings",
     icon: "/icons/mouse.png",
     description: "Themes, language, and desktop behavior.",
-  },
-  {
-    id: "marucast-receiver",
-    name: "Marucast Receiver",
-    route: "/marucast",
-    kicker: "Streaming",
-    icon: "/icons/applet-marucast.svg",
-    description: "Open the Marucast receiver",
   },
 ];
 
@@ -537,6 +538,37 @@ function getDesktopShellHtml() {
         flex-wrap: wrap;
       }
 
+      .receiver-qr {
+        text-align: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+
+      .receiver-qr p {
+        margin: 0 0 12px;
+        color: var(--desktop-muted);
+        font-size: 0.85rem;
+      }
+
+      .receiver-qr img {
+        border-radius: 8px;
+        max-width: 180px;
+        display: block;
+        margin: 0 auto 12px;
+      }
+
+      .receiver-qr button {
+        padding: 10px 16px;
+        border: 1px solid var(--desktop-border);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--desktop-text);
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
       .receiver-btn {
         padding: 10px 16px;
         border: 1px solid var(--desktop-border);
@@ -724,30 +756,18 @@ function getDesktopShellHtml() {
           <div class="receiver-panel">
             <div class="receiver-header">
               <h2>Marucast Receiver</h2>
-              <p>Discover and connect to Marucast senders on your network.</p>
+              <p>Scan QR code with Maru Link app to pair.</p>
             </div>
-            <div class="receiver-controls">
-              <button class="receiver-btn receiver-btn-primary" id="receiver-discover" type="button">
-                Discover Senders
-              </button>
-              <button class="receiver-btn" id="receiver-stop-discover" type="button" hidden>
-                Stop Discovery
-              </button>
-              <button class="receiver-btn receiver-btn-danger" id="receiver-disconnect" type="button" hidden>
-                Disconnect
-              </button>
-            </div>
-            <div class="receiver-volume" id="receiver-volume-group" hidden>
-              <label for="receiver-volume">Volume</label>
-              <input type="range" id="receiver-volume" min="0" max="100" value="100" />
-              <span id="receiver-volume-label">100%</span>
+            <div class="receiver-qr" id="receiver-qr">
+              <p>Scan this with Maru Link app:</p>
+              <img id="receiver-qr-image" alt="QR code" />
+              <button class="receiver-btn" id="receiver-refresh-qr" type="button">Refresh QR</button>
             </div>
             <div class="receiver-status" id="receiver-status">
               <span class="receiver-status-dot" id="receiver-status-dot"></span>
               <span id="receiver-status-text">Ready</span>
             </div>
             <div class="receiver-error" id="receiver-error" hidden></div>
-            <div class="receiver-senders" id="receiver-senders"></div>
           </div>
         </section>
       </div>
@@ -899,27 +919,22 @@ function getDesktopShellHtml() {
           disconnectBtn.hidden = true;
           volumeGroup.hidden = true;
           errorEl.hidden = true;
-        }
+}
+
+      // Show QR code on load
+      const qrImage = document.getElementById("receiver-qr-image");
+      if (qrImage) {
+        window.marucast?.getQr("", window.location.origin).then((result) => {
+          if (result?.ok && result?.dataUrl) { qrImage.src = result.dataUrl; }
+        });
       }
 
-      discoverBtn?.addEventListener("click", () => {
-        errorEl.hidden = true;
-        receiver?.startDiscovery();
-      });
-
-      stopDiscoverBtn?.addEventListener("click", () => {
-        receiver?.stopDiscovery();
-      });
-
-      disconnectBtn?.addEventListener("click", () => {
-        receiver?.disconnect();
-        pcmQueue = [];
-      });
-
-      volumeSlider?.addEventListener("input", () => {
-        const vol = parseInt(volumeSlider.value, 10) / 100;
-        volumeLabel.textContent = volumeSlider.value + "%";
-        receiver?.setVolume(vol);
+      // Refresh button
+      const refreshQrBtn = document.getElementById("receiver-refresh-qr");
+      refreshQrBtn?.addEventListener("click", () => {
+        window.marucast?.getQr("", window.location.origin).then((result) => {
+          if (result?.ok && result?.dataUrl && qrImage) { qrImage.src = result.dataUrl; }
+        });
       });
 
       function applyUpdateStatus(status) {
@@ -1050,6 +1065,17 @@ function getDesktopShellHtml() {
           subtitle.textContent = nextCard.querySelector(".desktop-applet-kicker")?.textContent || "Applet";
         }
 
+        if (activeAppletId === "marucast-receiver") {
+          if (appletStage) {
+            appletStage.classList.remove("is-visible");
+          }
+          if (receiverStage) {
+            receiverStage.classList.add("is-visible");
+          }
+          receiver?.getStatus().then(applyReceiverStatus).catch(() => {});
+          return;
+        }
+
         if (receiverStage) {
           receiverStage.classList.remove("is-visible");
         }
@@ -1135,17 +1161,6 @@ async function readBundledFile(requestPath) {
 }
 
 function buildDesktopApiResponse(requestPath) {
-  if (requestPath === "/api/marucast-qr") {
-    const marucastUrl = "maruhelper://?target=marucast";
-    const qrDataUrl = QRCode.toDataURL(marucastUrl, { width: 200, margin: 2 }).catch(() => null);
-    if (qrDataUrl) {
-      return {
-        body: JSON.stringify({ ok: true, dataUrl: qrDataUrl }),
-        contentType: "application/json; charset=utf-8",
-        statusCode: 200,
-      };
-    }
-  }
   const payload = JSON.stringify({
     error: "This feature is not available in the desktop app right now.",
     route: requestPath,
@@ -1179,35 +1194,6 @@ async function startLocalServer() {
           "Content-Type": "text/html; charset=utf-8",
         });
         response.end(getDesktopShellHtml());
-        return;
-      }
-
-      if (requestPath === "/marucast") {
-        const qr = await import("qrcode");
-        const dataUrl = await qr.default.toDataURL("maruhelper://?target=marucast", { width: 200, margin: 2 });
-        const html = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Marucast</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; background: #0f141c; color: #f2f6ff; font-family: "Segoe UI", system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    h1 { font-size: 1.5rem; margin: 0 0 1.5rem; font-weight: 600; }
-    #qr { background: #fff; padding: 12px; border-radius: 12px; }
-    #qr img { display: block; width: 200px; height: 200px; }
-    p { color: rgba(242,246,255,0.7); margin: 1rem 0 0; font-size: 0.9rem; text-align: center; }
-  </style>
-</head>
-<body>
-  <h1>Marucast Receiver</h1>
-  <div id="qr"><img src="${dataUrl}" alt="QR Code" /></div>
-  <p>Scan with Maru Link app to stream music</p>
-</body>
-</html>`;
-        response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        response.end(html);
         return;
       }
 
@@ -1673,9 +1659,13 @@ ipcMain.handle("marucast:get-status", () => {
   };
 });
 
-ipcMain.handle("marucast:get-senders", () => {
-  if (!marucastReceiver) return "[]";
-  return marucastReceiver.getSendersJson();
+ipcMain.handle("marucast:get-qr", async (_event, token, siteOrigin) => {
+  const origin = siteOrigin || "https://maru.vercel.app";
+  const url = `maruhelper://?token=${encodeURIComponent(token || "")}&siteOrigin=${encodeURIComponent(origin)}&target=marucast`;
+  try {
+    const dataUrl = await QRCode.toDataURL(url, { width: 200, margin: 2 });
+    return { ok: true, dataUrl };
+  } catch { return { ok: false }; }
 });
 
 let updateSupported = true;
