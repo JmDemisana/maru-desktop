@@ -18,23 +18,3 @@ contextBridge.exposeInMainWorld("maruDesktop", {
     },
   },
 });
-
-contextBridge.exposeInMainWorld("marucast", {
-  startDiscovery: () => ipcRenderer.invoke("marucast:start-discovery"),
-  stopDiscovery: () => ipcRenderer.invoke("marucast:stop-discovery"),
-  connect: (host, port, name, code) =>
-    ipcRenderer.invoke("marucast:connect", host, port, name, code),
-  disconnect: () => ipcRenderer.invoke("marucast:disconnect"),
-  setVolume: (vol) => ipcRenderer.invoke("marucast:set-volume", vol),
-  getStatus: () => ipcRenderer.invoke("marucast:get-status"),
-  getSenders: () => ipcRenderer.invoke("marucast:get-senders"),
-  onPcm: (callback) => {
-    ipcRenderer.on("marucast:pcm", (_event, chunk) => callback(chunk));
-  },
-  onSenders: (callback) => {
-    ipcRenderer.on("marucast:senders", (_event, senders) => callback(senders));
-  },
-  onStatus: (callback) => {
-    ipcRenderer.on("marucast:status", (_event, status) => callback(status));
-  },
-});
